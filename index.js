@@ -10,9 +10,9 @@ app
     .use(cors())
     .use(cookieParser())
     .use(bodyParser.json())
-    // .use(bodyParser.urlencoded({extended : true}))
+    .use(bodyParser.urlencoded({extended : true}))
     .use(express.static("public"))
-    .get('/',(req,res) => {
+    .get('/api',(req,res) => {
         res.json({status : process.env.SECRET})
     })
     .listen(port)
