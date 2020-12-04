@@ -29,7 +29,7 @@ async function sendVerification(email) {
         submitbtn.innerHTML ='Check your Inbox..'
         submitbtn.disabled = true
         setTimeout(() => {
-            window.location.href = "./index.html"
+            window.location.href = "./newPassword.html"
         }, 4500);
     }
     else{

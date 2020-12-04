@@ -78,7 +78,7 @@ userRouter
             })
             .catch(err => {
                 console.log(err);
-                res.status('401').json({error : 'Unauthorized..!!'});
+                res.status('401').json({error : 'Invalid Credentials..!!'});
             });
         }
     })
