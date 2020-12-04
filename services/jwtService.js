@@ -1,12 +1,15 @@
+require('dotenv').config({ path: '../.env' })
+
 const jwt = require('jsonwebtoken');
 
 const secret = process.env.JWT_SECRET;
 
-const createToken = (username) => {
+const createToken = (email) => {
     return jwt.sign({
-        username
+        exp : Math.floor(Date.now() / 1000) + (30 * 60),
+        email
     },secret, 
-    { expiresIn : 60}
+    // { expiresIn : Math.floor(Date.now() / 1000) + (60 * 60)}
 )};
 
 const validateToken = (token) => {

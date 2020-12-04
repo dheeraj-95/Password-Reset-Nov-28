@@ -1,165 +1,219 @@
 require('dotenv').config({ path: '../.env' })
 const express = require('express')
 const userRouter = express.Router()
-// const mongoose = require('mongoose')
-// const User = mongoose.model("User")
 
-// const crypto = require('crypto')
-// const bcrypt = require('bcryptjs')
-// const jwt = require('jsonwebtoken')
-
-const JWT_SECRET = process.env.JWT_SECRET;
+const mongodb = require('mongodb');
+const mongoClient = mongodb.MongoClient;
 
 const nodemailer = require('nodemailer')
 
+const url = process.env.MONGO_URL;
+const JWT_SECRET = process.env.JWT_SECRET;
+const authMiddleWare = require('../middlewares/authMiddleware');
+const {generateHash, validateHash} = require('../services/hashingService');
+const {createToken, validateToken} = require('../services/jwtService');
 
-
-userRouter.post('/signup', (req, res) => {
-    const { name, email, password } = req.body
-    if (!email || !password || !name) {
-        return res.status(422).json({ error: "please add all the fields" })
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL,
+        pass: process.env.EMAIL_PASSWORD
     }
-    // User.findOne({ email: email })
-    //     .then((savedUser) => {
-    //         if (savedUser) {
-    //             return res.status(422).json({ error: "user already exists with that email" })
-    //         }
-    //         bcrypt.hash(password, 12)
-    //             .then(hashedpassword => {
-    //                 const user = new User({
-    //                     email,
-    //                     password: hashedpassword,
-    //                     name,
-    //                     pic
-    //                 })
+});
 
-    //                 user.save()
-    //                     .then(user => {
-    //                         // transporter.sendMail({
-    //                         //     to:user.email,
-    //                         //     from:"no-reply@insta.com",
-    //                         //     subject:"signup success",
-    //                         //     html:"<h1>welcome to instagram</h1>"
-    //                         // })
-    //                         res.json({ message: "saved successfully" })
-    //                     })
-    //                     .catch(err => {
-    //                         console.log(err)
-    //                     })
-    //             })
+userRouter
+    .post('/signup', async (req, res) => {
+        const { name, email, password } = req.body;
 
-    //     })
-    //     .catch(err => {
-    //         console.log(err)
-    //     })
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.EMAIL,
-            pass: process.env.EMAIL_PASSWORD
+        const client = await mongoClient.connect(url, { useUnifiedTopology: true });
+        const db = client.db('usersdb');
+        const user = db.collection('users');
+
+        const existingUser = await user.findOne({ email: email })
+        if (existingUser) {
+            res.status(422).json({ error: "User already exists with this email" });
+        } else {
+            generateHash(password)
+                .then(hash => {
+                    const options = { upsert: true };
+                    user.findOneAndUpdate({ email }, { $set: { password: hash } }, options);
+                    res.status(201).json({ message: 'User Registered Successfully' });
+                })
+                .catch(err => {
+                    console.log(err);
+                    res.json(err);
+                })
+
         }
-    })
-    
-    const mailDetails = {
-        from: '"Password reset Request" <noreply@dheeraj.com>',
-        to: 'dheerajlinak@gmail.com',
-        subject: "password reset",
-        text: 'test',
-        html: `
-        <p>You requested for password reset</p>
-        `
-    }
-    
-    transporter.sendMail(mailDetails, (err, info) => {
-        if (err)
-            console.log(err)
+    });
+
+userRouter
+    .post('/signin', async (req, res) => {
+        const { email, password } = req.body
+        if (!email || !password) {
+            return res.status(422).json({ error: "please add email or password" })
+        }
+
+        const client = await mongoClient.connect(url, { useUnifiedTopology: true });
+        const db = client.db('usersdb');
+        const user = db.collection('users');
+
+        const existingUser = await user.findOne({ email: email })
+        if (!existingUser) {
+            res.status(422).json({ error: "Invalid Email or password" });
+        }
         else {
-            console.log('sent successfully');
+            validateHash(password, existingUser.password).then(hashResult => {
+                if(hashResult){
+                    const token = createToken(email);
+                    res.cookie('jwt',token, {
+                        maxAge : 100000000,
+                        httpOnly : true,
+                        secure : true
+                    })
+                    res.status(200).json({status : 'Login Successfull..!!'});
+                }else {
+                    res.status('401').json({error : 'Unauthorized..!!'});
+                }
+            })
+            .catch(err => {
+                console.log(err);
+                res.status('401').json({error : 'Unauthorized..!!'});
+            });
         }
     })
-    
-})
+
+userRouter
+    .get('/logout', (req, res) => {
+        res.clearCookie('jwt');
+        res.status(200).json({status : 'Logged Out'});
+    })
+
+userRouter
+    .post('/reset-password', async (req, res) => {
+        const { email } = req.body
+        if (!email) {
+            return res.status(422).json({ error: "please add email" })
+        }
+
+        const client = await mongoClient.connect(url, { useUnifiedTopology: true });
+        const db = client.db('usersdb');
+        const user = db.collection('users');
+
+        const existingUser = await user.findOne({ email: email })
+        if (!existingUser) {
+            return res.status(422).json({ error: "User dont exists with that email" })
+        } else {
+            const token = createToken(email);
+            user.findOneAndUpdate({ email: email }, { $set: { password: token } })
+
+            const resetUrl = `https://password-reset-heroku.herokuapp.com/auth/${token}`
+
+            const mailOptions = {
+                to: `${email}`,
+                from: "no-replay@dheeraj.com",
+                subject: "Password Reset Link",
+                html: `
+                <p>You requested for password reset</p> <br>click in this <a href="${resetUrl}">link</a> to reset password <br>
+                Link Expires in 30 minutes.
+                `
+            }
+            transporter.sendMail(mailOptions, (err, info) => {
+                if (err)
+                    console.log(err);
+                else {
+                    res.json({ message: `Password Reset link sent to ${email}` });
+                }
+            });
+        }
+    });
 
 
-// router.post('/signin',(req,res)=>{
-//     const {email,password} = req.body
-//     if(!email || !password){
-//        return res.status(422).json({error:"please add email or password"})
-//     }
-//     User.findOne({email:email})
-//     .then(savedUser=>{
-//         if(!savedUser){
-//            return res.status(422).json({error:"Invalid Email or password"})
-//         }
-//         bcrypt.compare(password,savedUser.password)
-//         .then(doMatch=>{
-//             if(doMatch){
-//                 // res.json({message:"successfully signed in"})
-//                const token = jwt.sign({_id:savedUser._id},JWT_SECRET)
-//                const {_id,name,email,followers,following,pic} = savedUser
-//                res.json({token,user:{_id,name,email,followers,following,pic}})
-//             }
-//             else{
-//                 return res.status(422).json({error:"Invalid Email or password"})
-//             }
-//         })
-//         .catch(err=>{
-//             console.log(err)
-//         })
-//     })
-// })
+userRouter.get('/auth/:token', async (req, res) => {
+    const token = req.params.token
+    const decoded = validateToken(token)
+
+    if (decoded) {
+        let client = await mongoClient.connect(url, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        });
+        const db = client.db('usersdb');
+        const user = db.collection('users');
+        user.findOneAndUpdate({
+            email: decoded.email
+        }, {
+            $set: {
+                confirmed: true
+            }
+        }, (err, result) => {
+            if (result) {
+                res.redirect('https://password-reset-flow-ui.netlify.app/newpassword.html');
+            }
+        });
+    }
+    else {
+        res.json({
+            error: `Password Reset failed.`
+        });
+    }
+});
 
 
-// router.post('/reset-password',(req,res)=>{
-//      crypto.randomBytes(32,(err,buffer)=>{
-//          if(err){
-//              console.log(err)
-//          }
-//          const token = buffer.toString("hex")
-//          User.findOne({email:req.body.email})
-//          .then(user=>{
-//              if(!user){
-//                  return res.status(422).json({error:"User dont exists with that email"})
-//              }
-//              user.resetToken = token
-//              user.expireToken = Date.now() + 3600000
-//              user.save().then((result)=>{
-//                  transporter.sendMail({
-//                      to:user.email,
-//                      from:"no-replay@insta.com",
-//                      subject:"password reset",
-//                      html:`
-//                      <p>You requested for password reset</p>
-//                      <h5>click in this <a href="${EMAIL}/reset/${token}">link</a> to reset password</h5>
-//                      `
-//                  })
-//                  res.json({message:"check your email"})
-//              })
+userRouter.post('/passwordreset', async (req, res) => {
+    const {
+        password,
+        email
+    } = req.body;
+    let client = await mongoClient.connect(url, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+    }); 
+    const db = client.db('usersdb');
+    const user = db.collection('users');
 
-//          })
-//      })
-// })
+    user.findOne({
+        email: email
+    }, (err, User) => {
+        if (User == null) {
+            res.json({
+                message: 'No User found with ' + email + ' !!!'
+            });
+        } else {
+            let token = User.confirmed
+            if (token) {
+
+                generateHash(password)
+                    .then(hash => {
+                        user.findOneAndUpdate({ email: email }, { $set: { password: hash, confirmed: false } });
+                        res.status(200).json({ message: 'Password reset Successful' });
+                    })
+                    .catch(err => {
+                        console.log(err);
+                        res.json(err);
+                    })
+            }else {
+                res.json({error : err});
+            }
+        }
+    })
+});
 
 
-// router.post('/new-password',(req,res)=>{
-//     const newPassword = req.body.password
-//     const sentToken = req.body.token
-//     User.findOne({resetToken:sentToken,expireToken:{$gt:Date.now()}})
-//     .then(user=>{
-//         if(!user){
-//             return res.status(422).json({error:"Try again session expired"})
-//         }
-//         bcrypt.hash(newPassword,12).then(hashedpassword=>{
-//            user.password = hashedpassword
-//            user.resetToken = undefined
-//            user.expireToken = undefined
-//            user.save().then((saveduser)=>{
-//                res.json({message:"password updated success"})
-//            })
-//         })
-//     }).catch(err=>{
-//         console.log(err)
-//     })
-// })
+userRouter.get('/checklogin', function (req, res) {
+    const {jwt} = req.cookies
+    console.log(jwt);
+    const decoded = validateToken(jwt)
+    if (decoded) {
+        res.json({
+            message: 'Login Successful..',
+            user: decoded.email
+        });
+    } else {
+        res.json({
+            message: 'Invalid Login..'
+        });
+    }
+});
 
 module.exports = userRouter
