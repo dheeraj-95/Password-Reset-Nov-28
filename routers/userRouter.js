@@ -1,6 +1,6 @@
-require('dotenv').config({path :'../.env'})
+require('dotenv').config({ path: '../.env' })
 const express = require('express')
-const router = express.Router()
+const userRouter = express.Router()
 // const mongoose = require('mongoose')
 // const User = mongoose.model("User")
 
@@ -12,72 +12,73 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 const nodemailer = require('nodemailer')
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail', 
-  auth: { 
-      user: process.env.EMAIL, 
-      pass: process.env.EMAIL_PASSWORD
-  } 
-})
 
-const mailDetails = {
-    from: '"Hey dude 👻" <noreply@dheeraj.com>', 
-    to:'dheerajlinak@gmail.com',
-    subject:"password reset",
-    text : 'test',
-    html:`
-    <p>You requested for password reset</p>
-    `
-}
 
-transporter.sendMail(mailDetails, (err,info) => {
-    if(err) 
-        console.log(err)
-    else {
-        console.log('sent successfully');
+userRouter.post('/signup', (req, res) => {
+    const { name, email, password } = req.body
+    if (!email || !password || !name) {
+        return res.status(422).json({ error: "please add all the fields" })
     }
-})
+    // User.findOne({ email: email })
+    //     .then((savedUser) => {
+    //         if (savedUser) {
+    //             return res.status(422).json({ error: "user already exists with that email" })
+    //         }
+    //         bcrypt.hash(password, 12)
+    //             .then(hashedpassword => {
+    //                 const user = new User({
+    //                     email,
+    //                     password: hashedpassword,
+    //                     name,
+    //                     pic
+    //                 })
 
+    //                 user.save()
+    //                     .then(user => {
+    //                         // transporter.sendMail({
+    //                         //     to:user.email,
+    //                         //     from:"no-reply@insta.com",
+    //                         //     subject:"signup success",
+    //                         //     html:"<h1>welcome to instagram</h1>"
+    //                         // })
+    //                         res.json({ message: "saved successfully" })
+    //                     })
+    //                     .catch(err => {
+    //                         console.log(err)
+    //                     })
+    //             })
 
-// router.post('/signup',(req,res)=>{
-//   const {name,email,password,pic} = req.body 
-//   if(!email || !password || !name){
-//      return res.status(422).json({error:"please add all the fields"})
-//   }
-//   User.findOne({email:email})
-//   .then((savedUser)=>{
-//       if(savedUser){
-//         return res.status(422).json({error:"user already exists with that email"})
-//       }
-//       bcrypt.hash(password,12)
-//       .then(hashedpassword=>{
-//             const user = new User({
-//                 email,
-//                 password:hashedpassword,
-//                 name,
-//                 pic
-//             })
+    //     })
+    //     .catch(err => {
+    //         console.log(err)
+    //     })
+    const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.EMAIL,
+            pass: process.env.EMAIL_PASSWORD
+        }
+    })
     
-//             user.save()
-//             .then(user=>{
-//                 // transporter.sendMail({
-//                 //     to:user.email,
-//                 //     from:"no-reply@insta.com",
-//                 //     subject:"signup success",
-//                 //     html:"<h1>welcome to instagram</h1>"
-//                 // })
-//                 res.json({message:"saved successfully"})
-//             })
-//             .catch(err=>{
-//                 console.log(err)
-//             })
-//       })
-     
-//   })
-//   .catch(err=>{
-//     console.log(err)
-//   })
-// })
+    const mailDetails = {
+        from: '"Password reset Request" <noreply@dheeraj.com>',
+        to: 'dheerajlinak@gmail.com',
+        subject: "password reset",
+        text: 'test',
+        html: `
+        <p>You requested for password reset</p>
+        `
+    }
+    
+    transporter.sendMail(mailDetails, (err, info) => {
+        if (err)
+            console.log(err)
+        else {
+            console.log('sent successfully');
+        }
+    })
+    
+})
 
 
 // router.post('/signin',(req,res)=>{
@@ -160,3 +161,5 @@ transporter.sendMail(mailDetails, (err,info) => {
 //         console.log(err)
 //     })
 // })
+
+module.exports = userRouter
