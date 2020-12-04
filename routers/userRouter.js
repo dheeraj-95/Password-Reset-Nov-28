@@ -23,7 +23,7 @@ const transporter = nodemailer.createTransport({
 
 userRouter
     .post('/signup', async (req, res) => {
-        const { name, email, password } = req.body;
+        const { email, password } = req.body;
 
         const client = await mongoClient.connect(url, { useUnifiedTopology: true });
         const db = client.db('usersdb');
@@ -37,7 +37,7 @@ userRouter
                 .then(hash => {
                     const options = { upsert: true };
                     user.findOneAndUpdate({ email }, { $set: { password: hash } }, options);
-                    res.status(201).json({ message: 'User Registered Successfully' });
+                    res.status(201).json({type : 'success' ,message: 'User Registered Successfully' });
                 })
                 .catch(err => {
                     console.log(err);
@@ -122,7 +122,7 @@ userRouter
                 if (err)
                     console.log(err);
                 else {
-                    res.json({ message: `Password Reset link sent to ${email}` });
+                    res.json({type : 'success' , message: `Password Reset link sent to ${email}` });
                 }
             });
         }
@@ -148,7 +148,7 @@ userRouter.get('/auth/:token', async (req, res) => {
             }
         }, (err, result) => {
             if (result) {
-                res.redirect('');
+                res.redirect('https://amazing-mcclintock-f988ec.netlify.app/newPassword.html');
             }
         });
     }

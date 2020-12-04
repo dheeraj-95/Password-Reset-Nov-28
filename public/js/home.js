@@ -8,8 +8,9 @@ async function checklogin() {
         }
     });
     const res = await response.json()
+    console.log(res);
     custom_alert(res.type, res.message);
-    if (res.type !== 'success') {
+    if (res.type != 'success') {
         setTimeout(() => {
             window.location.href = "./index.html"
         }, 3000);
