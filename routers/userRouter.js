@@ -148,7 +148,7 @@ userRouter.get('/auth/:token', async (req, res) => {
             }
         }, (err, result) => {
             if (result) {
-                res.redirect('https://password-reset-flow-ui.netlify.app/newpassword.html');
+                res.redirect('');
             }
         });
     }
