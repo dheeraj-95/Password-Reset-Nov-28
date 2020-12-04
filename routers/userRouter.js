@@ -71,7 +71,7 @@ userRouter
                         httpOnly : true,
                         secure : true
                     })
-                    res.status(200).json({status : 'Login Successfull..!!'});
+                    res.status(200).json({type : 'success', status : 'Login Successfull..!!'});
                 }else {
                     res.status('401').json({error : 'Unauthorized..!!'});
                 }
@@ -186,7 +186,7 @@ userRouter.post('/passwordreset', async (req, res) => {
                 generateHash(password)
                     .then(hash => {
                         user.findOneAndUpdate({ email: email }, { $set: { password: hash, confirmed: false } });
-                        res.status(200).json({ message: 'Password reset Successful' });
+                        res.status(200).json({type : 'success' ,message: 'Password reset Successful' });
                     })
                     .catch(err => {
                         console.log(err);

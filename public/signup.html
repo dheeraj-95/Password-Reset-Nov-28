@@ -26,8 +26,8 @@
     <div class="collapse navbar-collapse " id="navbarNavAltMarkup">
       <!-- <div class="navbar-nav align-items-center"> -->
       <ul class="navbar-nav ml-auto">
-        <li class="nav-item active"><a class="nav-link" href="index.html">Login</a></li>
-        <li class="nav-item"><a class="nav-link" href="signup.html">Sign Up</a></li>
+        <li class="nav-item"><a class="nav-link" href="index.html">Login</a></li>
+        <li class="nav-item active"><a class="nav-link" href="signup.html">Sign Up</a></li>
       </ul>
       <!-- </div> -->
     </div>
@@ -41,16 +41,20 @@
       <div class="row py-0 px-0">
         <div class="col-md-3"></div>
 
-        <div class="col-md-6 text-center">
-          <form class="my-bootstrap-form" id="signup-form">
-            <h4 style="color: black;">User Sign Up</h4>
+        <div class="col-md-6 ">
+          <form class="my-bootstrap-form" id="signup-form" autocomplete="off">
+            <h4 style="color: black;" class="text-center">User Sign Up</h4>
 
             <div class="form-group">
+              <label for="email">Email</label>
               <input id="email" type="email" name="email" placeholder="User Email Id" class="form-control mb-3"
                 required>
+              <label for="password">Password</label>
+
               <input id="password" type="password" name="password" placeholder="Enter Password" maxlength="10"
                 class="form-control mb-3" required>
-              <input id="confirmPassword" type="password" name="confirmPassword" placeholder="Confirm Password" maxlength="10"
+                <label for="confirmPassword">Confirm Password</label>
+                <input id="confirmPassword" type="password" name="confirmPassword" placeholder="Confirm Password" maxlength="10"
                 class="form-control mb-3" required>  
               <button type="button" onclick="signup()" id="signupbtn" style=" letter-spacing: 3px;"
                 class="btn btn-primary form-control">SignUp</button>

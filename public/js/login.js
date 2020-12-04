@@ -27,7 +27,7 @@ async function CheckCredentials(email, password) {
         }
     });
     const res = await datares.json();
-    if (res) {
+    if (res.type == 'success') {
         loginbtn.innerHTML = 'login successful...';
         setTimeout(() => {
             window.location.href = `./home.html`;
