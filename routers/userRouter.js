@@ -86,7 +86,7 @@ userRouter
 userRouter
     .get('/logout', (req, res) => {
         res.clearCookie('jwt');
-        res.status(200).json({status : 'Logged Out'});
+        res.status(200).json({type : 'success',message : 'Logged Out'});
     })
 
 userRouter
@@ -206,6 +206,7 @@ userRouter.get('/checklogin', function (req, res) {
     const decoded = validateToken(jwt)
     if (decoded) {
         res.json({
+            type : "success",
             message: 'Login Successful..',
             user: decoded.email
         });

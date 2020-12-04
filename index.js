@@ -11,7 +11,7 @@ app
     .use(cookieParser())
     .use(bodyParser.json())
     .use(bodyParser.urlencoded({extended : true}))
-    // .use(express.static("public"))
+    .use(express.static("public"))
     .get('/',(req,res) => {
         res.json({status :"Hello From Backend"})
     })
